@@ -1,0 +1,75 @@
+Addis Ababa,Bishoftu,47
+Bishoftu,Modjo,24
+Modjo,Adama,25
+Adama,Metehara,95
+Metehara,Awash,46
+Awash,Gewane,107
+Gewane,Mile,150
+Mile,Semera,75
+Semera,Serdo,30
+Serdo,Dobi,50
+Dobi,Bure,130
+Dobi,Galafi,28
+
+Addis Ababa,Debre Berhan,130
+Debre Berhan,Debre Sina,60
+Debre Sina,Efeson Ataye,30
+Efeson Ataye,Kemisse,50
+Kemisse,Kombolcha,40
+Kombolcha,Dessie,60
+Dessie,Woldiya,70
+Woldiya,Waja,40
+Waja,Maichew,50
+Maichew,Mekelle,80
+Mekelle,Adigrat,50
+Adigrat,Adi Abun,30
+Adi Abun,Shire,100
+Shire,Humera,200
+
+Addis Ababa,Debre Marqos,250
+Debre Marqos,Bahir Dar,80
+Debre Marqos,Sekela,50
+
+Addis Ababa,Cheliya,30
+Cheliya,Ambo,30
+Ambo,Gedo,60
+Gedo,Nekemte,50
+Nekemte,Gimbi,80
+Gimbi,Gedi Adis,90
+Gedi Adis,Gambela,300
+
+Addis Ababa,Alemgena,94
+Alemgena,Giyon,42
+Giyon,Walkite,33
+Walkite,Gibe River,33
+Gibe River,Jimma,70
+Jimma,Metu,100
+Jimma,Bedele,143
+Bedele,Mizan Teferi,216
+Jimma,Bonga,101
+Bonga,Mizan Teferi,115
+
+Modjo,Adama,25
+Adama,Batu,30
+Batu,Assela,100
+Assela,Bekoji,50
+Bekoji,Dodola,60
+Dodola,Robe,90
+Robe,Kofele,30
+Kofele,Shashamene,60
+Shashamene,Arba Minch,100
+Assela,Goba,150
+
+Shashamene,Arsi Negele,30
+Arsi Negele,Kofele,50
+Kofele,Bule Hora,217
+Shashamene,Awassa,30Debre Birhan,Ankober,42
+Debre Birhan,Ankober,42
+Debre Berhan,Ankober,42
+Debre Berhan,Tarmaber,50
+Tarmaber,Seladengay,72
+Ankober,Aliyu Amba,12
+Aliyu Amba,Gacheni,12
+Gacheni,Amibara,57
+Amibara,Awash,50
+Metehara,Awash,30

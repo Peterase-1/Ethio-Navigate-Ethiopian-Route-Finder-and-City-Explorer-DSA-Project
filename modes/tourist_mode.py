@@ -8,7 +8,7 @@ def tourist_navigator(graph, start, end, heritages):
         return "No route found."
 
     result = []
-    for cost, path in paths:
+    for cost, path in paths[:3]:
         included_heritages = [heritage for city in path for heritage in heritages.get(city, [])]
         result.append((cost, path, included_heritages))
     return result

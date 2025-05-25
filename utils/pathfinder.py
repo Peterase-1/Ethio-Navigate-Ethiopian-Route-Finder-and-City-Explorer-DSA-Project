@@ -1,21 +1,18 @@
-import heapq
+def find_all_paths(graph, start, end, path=None, cost=0, visited=None):
+    if path is None:
+        path = [start]
+    if visited is None:
+        visited = set()
+    visited.add(start)
 
-def find_all_paths(graph, start, end):
-    queue = [(0, start, [])]
-    visited = set()
+    if start == end:
+        return [(cost, path)]
+
     paths = []
-
-    while queue:
-        (cost, node, path) = heapq.heappop(queue)
-        if node in visited:
-            continue
-        visited.add(node)
-        path = path + [node]
-
-        if node == end:
-            paths.append((cost, path))
-        for neighbor, weight in graph.get_neighbors(node):
-            if neighbor not in visited:
-                heapq.heappush(queue, (cost + weight, neighbor, path))
-
-    return sorted(paths, key=lambda x: x[0])
+    for neighbor, distance in graph.get_neighbors(start):
+        if neighbor not in visited:
+            new_path = path + [neighbor]
+            new_cost = cost + distance
+            paths.extend(find_all_paths(graph, neighbor, end, new_path, new_cost, visited.copy()))
+    paths.sort(key=lambda x: x[0])  # Sort by cost
+    return paths

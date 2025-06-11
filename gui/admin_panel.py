@@ -9,8 +9,45 @@ from PIL import Image, ImageTk
 import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from utils.file_io import save_edges, save_heritage, load_heritages, load_edges, load_visitors, reset_visitors
-from core.graph import Graph  # Added import for Graph class
+from EthioNavigator.utils.file_io import save_edges, save_heritage, load_heritages, load_edges, load_visitors, reset_visitors
+from EthioNavigator.core.graph import Graph
+
+# Quick Sort for sorting distances
+def quick_sort(arr, low, high):
+    if low < high:
+        pi = partition(arr, low, high)
+        quick_sort(arr, low, pi - 1)
+        quick_sort(arr, pi + 1, high)
+
+def partition(arr, low, high):
+    pivot = arr[high][1]  # Distance as pivot
+    i = low - 1
+    for j in range(low, high):
+        if arr[j][1] <= pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
+    arr[i + 1], arr[high] = arr[high], arr[i + 1]
+    return i + 1
+
+class SortDisplay(tk.Toplevel):
+    def __init__(self, master, sorted_distances):
+        super().__init__(master)
+        self.title("Sorted Distances from Current City")
+        self.geometry("600x400")
+        self.configure(bg="#f5f5f5")
+
+        canvas = tk.Canvas(self, bg="#f5f5f5", height=400, width=600)
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="#f5f5f5")
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        for i, (city, distance) in enumerate(sorted_distances):
+            tk.Label(scrollable_frame, text=f"{city}: {distance} km", bg="#f5f5f5", fg="#333", font=("Arial", 12)).pack(anchor="w", padx=10, pady=2)
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
 def show_login_dialog(root, password, success_callback):
     top = tk.Toplevel(root)
@@ -54,7 +91,7 @@ class AdminPanel(tk.Frame):
         columns_frame = tk.Frame(main_frame, bg="#f5f5f5")
         columns_frame.pack(fill="both", expand=True)
 
-        # Column 1: Add New City, Add Intermediate City, Connect Cities
+        # Column 1: Add New City, Add Intermediate City, Connect Cities, Search Connection
         col1 = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
         col1.pack(side="left", fill="y", padx=5)
 
@@ -136,7 +173,26 @@ class AdminPanel(tk.Frame):
                                   font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
             connect_btn.grid(row=3, column=0, columnspan=2, pady=5)
 
-        # Column 2: Delete City, Delete Connection, Add Heritage
+        # Search Connection
+        ttk.Label(col1, text="Search Connection", font=("Arial", 12)).pack(pady=5)
+        search_frame = tk.Frame(col1, bg="#f5f5f5")
+        search_frame.pack(pady=5)
+        ttk.Label(search_frame, text="Distance (km):", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.search_dist_entry = ttk.Entry(search_frame, width=15, font=("Arial", 10))
+        self.search_dist_entry.grid(row=0, column=1, padx=5, pady=2)
+        try:
+            search_icon = Image.open(root_path / "assets" / "search_icon.png")
+            search_icon = search_icon.resize((30, 30), Image.Resampling.LANCZOS)
+            self.search_photo = ImageTk.PhotoImage(search_icon)
+            search_btn = tk.Button(search_frame, image=self.search_photo, command=self.search_connection,
+                                 bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            search_btn.grid(row=1, column=0, columnspan=2, pady=5)
+        except FileNotFoundError:
+            search_btn = tk.Button(search_frame, text="Search", command=self.search_connection,
+                                 font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            search_btn.grid(row=1, column=0, columnspan=2, pady=5)
+
+        # Column 2: Delete City, Delete Connection, Sort by Current City, Add Heritage
         col2 = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
         col2.pack(side="left", fill="y", padx=5)
 
@@ -179,6 +235,25 @@ class AdminPanel(tk.Frame):
                                       font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
             delete_conn_btn.grid(row=2, column=0, columnspan=2, pady=5)
 
+        # Sort by Current City
+        ttk.Label(col2, text="Sort by Current City", font=("Arial", 12)).pack(pady=5)
+        sort_frame = tk.Frame(col2, bg="#f5f5f5")
+        sort_frame.pack(pady=5)
+        ttk.Label(sort_frame, text="Current City:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        self.sort_city_entry = ttk.Entry(sort_frame, width=15, font=("Arial", 10))
+        self.sort_city_entry.grid(row=0, column=1, padx=5, pady=2)
+        try:
+            sort_icon = Image.open(root_path / "assets" / "sort_icon.png")
+            sort_icon = sort_icon.resize((30, 30), Image.Resampling.LANCZOS)
+            self.sort_photo = ImageTk.PhotoImage(sort_icon)
+            sort_btn = tk.Button(sort_frame, image=self.sort_photo, command=self.sort_by_current_city,
+                               bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            sort_btn.grid(row=1, column=0, columnspan=2, pady=5)
+        except FileNotFoundError:
+            sort_btn = tk.Button(sort_frame, text="Sort", command=self.sort_by_current_city,
+                               font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            sort_btn.grid(row=1, column=0, columnspan=2, pady=5)
+
         ttk.Label(col2, text="Add Heritage", font=("Arial", 10)).pack(pady=5)
         heritage_frame = tk.Frame(col2, bg="#f5f5f5")
         heritage_frame.pack(pady=5)
@@ -204,7 +279,7 @@ class AdminPanel(tk.Frame):
         col3 = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
         col3.pack(side="left", fill="y", padx=5)
 
-        ttk.Label(col3, text="Visitor Analytics", font=("Arial", 12)).pack(pady=5)
+        ttk.Label(col3, text="Visitor Analytics", font=("Arial", 12), style="Custom.TLabel").pack(pady=5)
         canvas = tk.Canvas(col3, bg="#f5f5f5", height=400, width=300)
         scrollbar = ttk.Scrollbar(col3, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg="#f5f5f5")
@@ -303,6 +378,7 @@ class AdminPanel(tk.Frame):
                 self.go_frame.start_city["values"] = self.app.city_list
                 self.go_frame.end_city["values"] = self.app.city_list
                 edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+                self.app.edges = edges_data
                 save_edges(edges_data)
                 messagebox.showinfo("Success", f"New city {city} connected to {to_city} with {distance} km.")
             else:
@@ -335,6 +411,7 @@ class AdminPanel(tk.Frame):
             self.app.graph.add_edge(city, to_city, dist_to)
 
             edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+            self.app.edges = edges_data
             save_edges(edges_data)
 
             if city not in self.app.city_list:
@@ -362,16 +439,14 @@ class AdminPanel(tk.Frame):
                 if any((v == city2) for v, _ in self.app.graph.get_neighbors(city1)) or any((v == city1) for v, _ in self.app.graph.get_neighbors(city2)):
                     messagebox.showerror("Duplicate Edge", f"An edge already exists between {city1} and {city2}.")
                     return
-                # Directly add bidirectional edges to the graph
                 self.app.graph.add_edge(city1, city2, distance)
                 self.app.graph.add_edge(city2, city1, distance)
-                # Update city list and save edges
                 self.app.city_list = sorted(self.app.graph.edges.keys())
                 self.go_frame.start_city["values"] = self.app.city_list
                 self.go_frame.end_city["values"] = self.app.city_list
                 edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+                self.app.edges = edges_data
                 save_edges(edges_data)
-                # Verify the connection
                 if any(v == city2 for v, d in self.app.graph.get_neighbors(city1)) and any(v == city1 for v, d in self.app.graph.get_neighbors(city2)):
                     messagebox.showinfo("Success", f"Connected {city1} to {city2} with {distance} km in both directions.")
                 else:
@@ -387,8 +462,9 @@ class AdminPanel(tk.Frame):
         if city1 and city2:
             if city1 in self.app.graph.edges and any(v == city2 for v, _ in self.app.graph.get_neighbors(city1)):
                 self.app.admin.delete_edge(city1, city2)
-                self.app.admin.delete_edge(city2, city1)  # Remove reverse direction
+                self.app.admin.delete_edge(city2, city1)
                 edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+                self.app.edges = edges_data
                 save_edges(edges_data)
                 self.app.city_list = sorted(self.app.graph.edges.keys())
                 self.go_frame.start_city["values"] = self.app.city_list
@@ -418,7 +494,7 @@ class AdminPanel(tk.Frame):
                     self.app.city_list.remove(city)
                 self.go_frame.start_city["values"] = self.app.city_list
                 self.go_frame.end_city["values"] = self.app.city_list
-                self.app.visitors = load_visitors()  # Refresh visitors
+                self.app.visitors = load_visitors()
                 messagebox.showinfo("Success", f"City '{city}' deleted.")
             else:
                 messagebox.showwarning("Not Found", f"City '{city}' does not exist.")
@@ -432,8 +508,9 @@ class AdminPanel(tk.Frame):
             self.go_frame.start_city["values"] = self.app.city_list
             self.go_frame.end_city["values"] = self.app.city_list
             edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+            self.app.edges = edges_data
             save_edges(edges_data)
-            self.app.visitors = load_visitors()  # Refresh visitors
+            self.app.visitors = load_visitors()
             messagebox.showinfo("Success", "Last operation undone.")
         except ValueError as e:
             messagebox.showerror("Error", str(e))
@@ -462,6 +539,7 @@ class AdminPanel(tk.Frame):
                 self.go_frame.start_city["values"] = self.app.city_list
                 self.go_frame.end_city["values"] = self.app.city_list
                 edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+                self.app.edges = edges_data
                 save_edges(edges_data)
                 messagebox.showinfo("Success", "Database restored.")
             else:
@@ -500,3 +578,73 @@ class AdminPanel(tk.Frame):
         canvas = FigureCanvasTkAgg(fig, master=top)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True)
+
+    def search_connection(self):
+        try:
+            target_distance = int(self.search_dist_entry.get().strip())
+            if not self.app.edges:
+                messagebox.showwarning("No Data", "No connections available to search.")
+                return
+            sorted_edges = merge_sort(self.app.edges)
+            index = binary_search(sorted_edges, target_distance)
+            if index != -1:
+                connection = sorted_edges[index]
+                messagebox.showinfo("Search Result", f"Found connection: {connection[0]} to {connection[1]} with {connection[2]} km.")
+            else:
+                # Search for closest match
+                closest = min(self.app.edges, key=lambda x: abs(x[2] - target_distance))
+                messagebox.showinfo("Closest Match", f"No exact match. Closest: {closest[0]} to {closest[1]} with {closest[2]} km.")
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid distance.")
+
+    def sort_by_current_city(self):
+        current_city = self.sort_city_entry.get().strip()
+        if not current_city or current_city not in self.app.graph.edges:
+            messagebox.showerror("Invalid Input", "Please enter a valid current city.")
+            return
+
+        # Get all distances from current city
+        distances = [(neighbor, distance) for neighbor, distance in self.app.graph.get_neighbors(current_city)]
+        if not distances:
+            messagebox.showwarning("No Data", f"No connections found from {current_city}.")
+            return
+
+        # Sort using Quick Sort
+        quick_sort(distances, 0, len(distances) - 1)
+        SortDisplay(self.master, distances)
+        
+# Merge Sort and Binary Search (retained for search functionality)
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+
+def merge(left, right):
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i][2] <= right[j][2]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+def binary_search(arr, target_distance, start=0, end=None):
+    if end is None:
+        end = len(arr) - 1
+    if start > end:
+        return -1
+    mid = (start + end) // 2
+    if arr[mid][2] == target_distance:
+        return mid
+    elif arr[mid][2] < target_distance:
+        return binary_search(arr, target_distance, mid + 1, end)
+    else:
+        return binary_search(arr, target_distance, start, mid - 1)

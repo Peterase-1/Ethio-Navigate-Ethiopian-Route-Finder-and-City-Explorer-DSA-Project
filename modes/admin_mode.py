@@ -1,5 +1,5 @@
 import copy
-from utils.file_io import save_edges
+from utils.file_io import save_edges, save_visitors, load_visitors
 
 class Admin:
     def __init__(self, graph):
@@ -14,20 +14,21 @@ class Admin:
                 edges.append((city, to_city, distance))
             else:
                 # Update existing edge if it exists
-                for (f, t), d in list(self.graph.edges.items()):
-                    if (f == city and t == to_city) or (f == to_city and t == city):
-                        self.graph.edges[(f, t)] = distance
-                        edges.append((f, t, distance))
-                        break
+                for u in self.graph.edges:
+                    for v, d in self.graph.edges[u]:
+                        if (u == city and v == to_city) or (u == to_city and v == city):
+                            self.graph.delete_edge(u, v)
+                            self.graph.add_edge(city, to_city, distance)
+                            edges.append((city, to_city, distance))
+                            break
         elif mode == "intermediate" and from_city and distance is not None:
-            if (from_city, to_city) in self.graph.edges or (to_city, from_city) in self.graph.edges:
-                # Remove direct edge
-                self.delete_edge(from_city, to_city)
-            if (from_city, city) not in self.graph.edges and (city, from_city) not in self.graph.edges:
+            if any(v == to_city for v, _ in self.graph.get_neighbors(from_city)):
+                self.graph.delete_edge(from_city, to_city)
+            if not any(v == city for v, _ in self.graph.get_neighbors(from_city)):
                 self.graph.add_edge(from_city, city, distance)
                 edges.append((from_city, city, distance))
-            if (city, to_city) not in self.graph.edges and (to_city, city) not in self.graph.edges:
-                self.graph.add_edge(city, to_city, distance)  # Placeholder for remaining distance logic
+            if not any(v == to_city for v, _ in self.graph.get_neighbors(city)):
+                self.graph.add_edge(city, to_city, distance)
                 edges.append((city, to_city, distance))
 
         if edges:
@@ -35,25 +36,30 @@ class Admin:
             self.history.append(("add", copy.deepcopy(self.graph.edges)))
 
     def delete_edge(self, from_city, to_city):
-        if (from_city, to_city) in self.graph.edges:
-            del self.graph.edges[(from_city, to_city)]
-            save_edges(self.graph.edges_data())
-            self.history.append(("delete", copy.deepcopy(self.graph.edges)))
-        elif (to_city, from_city) in self.graph.edges:
-            del self.graph.edges[(to_city, from_city)]
-            save_edges(self.graph.edges_data())
-            self.history.append(("delete", copy.deepcopy(self.graph.edges)))
+        if from_city in self.graph.edges:
+            self.graph.edges[from_city] = [(n, d) for n, d in self.graph.edges[from_city] if n != to_city]
+        if to_city in self.graph.edges:
+            self.graph.edges[to_city] = [(n, d) for n, d in self.graph.edges[to_city] if n != from_city]
+        save_edges([(u, v, d) for u in self.graph.edges for v, d in self.graph.edges[u]])
+        self.history.append(("delete", copy.deepcopy(self.graph.edges)))
 
     def delete_city(self, city):
         if city in self.graph.edges:
-            neighbors = list(self.graph.get_neighbors(city))
+            # Remove all edges connected to the city
+            neighbors = self.graph.get_neighbors(city)
             for neighbor, _ in neighbors:
                 self.delete_edge(city, neighbor)
-            save_edges(self.graph.edges_data())
+            del self.graph.edges[city]
+            # Update visitors
+            visitors = load_visitors()
+            if city in visitors:
+                del visitors[city]
+                save_visitors(visitors)
+            save_edges([(u, v, d) for u in self.graph.edges for v, d in self.graph.edges[u]])
             self.history.append(("delete_city", copy.deepcopy(self.graph.edges)))
 
     def undo(self):
         if self.history:
             action, prev_state = self.history.pop()
             self.graph.edges = copy.deepcopy(prev_state)
-            save_edges(self.graph.edges_data())
+            save_edges([(u, v, d) for u in self.graph.edges for v, d in self.graph.edges[u]])

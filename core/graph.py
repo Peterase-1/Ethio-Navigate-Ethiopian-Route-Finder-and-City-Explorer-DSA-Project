@@ -1,6 +1,9 @@
+import heapq
+from collections import defaultdict
+
 class Graph:
     def __init__(self):
-        self.edges = {}  # Dictionary: {city: [(neighbor, distance), ...]}
+        self.edges = defaultdict(list)  # {city: [(neighbor, distance), ...]}
 
     def add_edge(self, from_city, to_city, distance):
         if from_city not in self.edges:
@@ -22,15 +25,20 @@ class Graph:
     def get_shortest_distance(self, start, end):
         if start not in self.edges or end not in self.edges:
             return None
-        from collections import deque
-        queue = deque([(start, 0)])
-        visited = {start}
-        while queue:
-            city, dist = queue.popleft()
-            if city == end:
-                return dist
-            for neighbor, distance in self.edges.get(city, []):
+        distances = {start: 0}
+        pq = [(0, start)]
+        visited = set()
+        while pq:
+            current_distance, current_city = heapq.heappop(pq)
+            if current_city in visited:
+                continue
+            visited.add(current_city)
+            if current_city == end:
+                return current_distance
+            for neighbor, distance in self.edges[current_city]:
                 if neighbor not in visited:
-                    visited.add(neighbor)
-                    queue.append((neighbor, dist + distance))
+                    distance_to_neighbor = current_distance + distance
+                    if neighbor not in distances or distance_to_neighbor < distances[neighbor]:
+                        distances[neighbor] = distance_to_neighbor
+                        heapq.heappush(pq, (distance_to_neighbor, neighbor))
         return None

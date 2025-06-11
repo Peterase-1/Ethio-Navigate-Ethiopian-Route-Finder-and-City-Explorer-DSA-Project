@@ -1,18 +1,26 @@
-def find_all_paths(graph, start, end, path=None, cost=0, visited=None):
-    if path is None:
-        path = [start]
-    if visited is None:
-        visited = set()
-    visited.add(start)
+from EthioNavigator.core.graph import Graph  # Absolute import
+import heapq
 
-    if start == end:
-        return [(cost, path)]
-
+def find_shortest_paths(graph, start, end):
+    if start not in graph.edges or end not in graph.edges:
+        return "City not registered."
+    distances = {start: 0}
+    previous = {start: None}
+    pq = [(0, start)]
     paths = []
-    for neighbor, distance in graph.get_neighbors(start):
-        if neighbor not in visited:
-            new_path = path + [neighbor]
-            new_cost = cost + distance
-            paths.extend(find_all_paths(graph, neighbor, end, new_path, new_cost, visited.copy()))
-    paths.sort(key=lambda x: x[0])  # Sort by cost
-    return paths
+    while pq:
+        current_distance, current_city = heapq.heappop(pq)
+        if current_city == end:
+            path = []
+            while current_city is not None:
+                path.append(current_city)
+                current_city = previous[current_city]
+            paths.append((current_distance, path[::-1]))
+            continue
+        for neighbor, distance in graph.get_neighbors(current_city):
+            distance_to_neighbor = current_distance + distance
+            if neighbor not in distances or distance_to_neighbor < distances[neighbor]:
+                distances[neighbor] = distance_to_neighbor
+                previous[neighbor] = current_city
+                heapq.heappush(pq, (distance_to_neighbor, neighbor))
+    return sorted(paths, key=lambda x: x[0])[:3] if paths else "No route found."

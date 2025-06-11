@@ -14,12 +14,13 @@ from gui.admin_panel import AdminPanel
 from core.graph import Graph
 from utils.file_io import load_edges, load_heritages, load_password, load_visitors, save_visitors, reset_visitors, save_heritage, save_edges, close_db_connection, initialize_database
 from modes.admin_mode import Admin
+from utils.Ai_Chatbot import get_ai_response  # New import for AI integration
 
 class EthioNavigatorGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("EthioNavigator")
-        self.root.geometry("1200x800")
+        self.root.geometry("1000x700")
         self.root.configure(bg="#f5f5f5")
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)

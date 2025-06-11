@@ -10,6 +10,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.file_io import save_edges, save_heritage, load_heritages, load_edges, load_visitors, reset_visitors
+from core.graph import Graph  # Added import for Graph class
 
 def show_login_dialog(root, password, success_callback):
     top = tk.Toplevel(root)
@@ -53,11 +54,12 @@ class AdminPanel(tk.Frame):
         columns_frame = tk.Frame(main_frame, bg="#f5f5f5")
         columns_frame.pack(fill="both", expand=True)
 
-        first_column = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
-        first_column.pack(side="left", fill="y", padx=5)
+        # Column 1: Add New City, Add Intermediate City, Connect Cities
+        col1 = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
+        col1.pack(side="left", fill="y", padx=5)
 
-        ttk.Label(first_column, text="Add New City", font=("Arial", 12)).pack(pady=5)
-        new_city_frame = tk.Frame(first_column, bg="#f5f5f5")
+        ttk.Label(col1, text="Add New City", font=("Arial", 12)).pack(pady=5)
+        new_city_frame = tk.Frame(col1, bg="#f5f5f5")
         new_city_frame.pack(pady=5)
         ttk.Label(new_city_frame, text="City:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
         new_city_entry = ttk.Entry(new_city_frame, width=15, font=("Arial", 10))
@@ -80,8 +82,8 @@ class AdminPanel(tk.Frame):
                                   font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
             add_new_btn.grid(row=3, column=0, columnspan=2, pady=5)
 
-        ttk.Label(first_column, text="Add Intermediate City", font=("Arial", 12)).pack(pady=5)
-        inter_city_frame = tk.Frame(first_column, bg="#f5f5f5")
+        ttk.Label(col1, text="Add Intermediate City", font=("Arial", 12)).pack(pady=5)
+        inter_city_frame = tk.Frame(col1, bg="#f5f5f5")
         inter_city_frame.pack(pady=5)
         ttk.Label(inter_city_frame, text="City:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
         inter_city_entry = ttk.Entry(inter_city_frame, width=15, font=("Arial", 10))
@@ -110,8 +112,75 @@ class AdminPanel(tk.Frame):
                                     font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
             add_inter_btn.grid(row=5, column=0, columnspan=2, pady=5)
 
-        ttk.Label(first_column, text="Add Heritage", font=("Arial", 10)).pack(pady=5)
-        heritage_frame = tk.Frame(first_column, bg="#f5f5f5")
+        ttk.Label(col1, text="Connect Cities", font=("Arial", 12)).pack(pady=5)
+        connect_frame = tk.Frame(col1, bg="#f5f5f5")
+        connect_frame.pack(pady=5)
+        ttk.Label(connect_frame, text="City 1:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        connect_city1_entry = ttk.Entry(connect_frame, width=15, font=("Arial", 10))
+        connect_city1_entry.grid(row=0, column=1, padx=5, pady=2)
+        ttk.Label(connect_frame, text="City 2:", font=("Arial", 10)).grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        connect_city2_entry = ttk.Entry(connect_frame, width=15, font=("Arial", 10))
+        connect_city2_entry.grid(row=1, column=1, padx=5, pady=2)
+        ttk.Label(connect_frame, text="Distance (km):", font=("Arial", 10)).grid(row=2, column=0, padx=5, pady=2, sticky="w")
+        connect_dist_entry = ttk.Entry(connect_frame, width=15, font=("Arial", 10))
+        connect_dist_entry.grid(row=2, column=1, padx=5, pady=2)
+        try:
+            connect_icon = Image.open(root_path / "assets" / "add_icon.png")
+            connect_icon = connect_icon.resize((30, 30), Image.Resampling.LANCZOS)
+            self.connect_photo = ImageTk.PhotoImage(connect_icon)
+            connect_btn = tk.Button(connect_frame, image=self.connect_photo, command=lambda: self.connect_cities(connect_city1_entry, connect_city2_entry, connect_dist_entry),
+                                  bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            connect_btn.grid(row=3, column=0, columnspan=2, pady=5)
+        except FileNotFoundError:
+            connect_btn = tk.Button(connect_frame, text="Connect", command=lambda: self.connect_cities(connect_city1_entry, connect_city2_entry, connect_dist_entry),
+                                  font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            connect_btn.grid(row=3, column=0, columnspan=2, pady=5)
+
+        # Column 2: Delete City, Delete Connection, Add Heritage
+        col2 = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
+        col2.pack(side="left", fill="y", padx=5)
+
+        ttk.Label(col2, text="Delete City", style="Red.TLabel").pack(pady=5)
+        del_frame = tk.Frame(col2, bg="#f5f5f5")
+        del_frame.pack(pady=5)
+        ttk.Label(del_frame, text="City:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        del_entry = ttk.Entry(del_frame, width=15, font=("Arial", 10))
+        del_entry.grid(row=0, column=1, padx=5, pady=2)
+        try:
+            del_icon = Image.open(root_path / "assets" / "delete_icon.png")
+            del_icon = del_icon.resize((30, 30), Image.Resampling.LANCZOS)
+            self.del_photo = ImageTk.PhotoImage(del_icon)
+            del_btn = tk.Button(del_frame, image=self.del_photo, command=lambda: self.delete_city(del_entry),
+                              bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            del_btn.grid(row=1, column=0, columnspan=2, pady=5)
+        except FileNotFoundError:
+            del_btn = tk.Button(del_frame, text="Delete", command=lambda: self.delete_city(del_entry),
+                              font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            del_btn.grid(row=1, column=0, columnspan=2, pady=5)
+
+        ttk.Label(col2, text="Delete Connection", font=("Arial", 12)).pack(pady=5)
+        delete_conn_frame = tk.Frame(col2, bg="#f5f5f5")
+        delete_conn_frame.pack(pady=5)
+        ttk.Label(delete_conn_frame, text="City 1:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
+        delete_city1_entry = ttk.Entry(delete_conn_frame, width=15, font=("Arial", 10))
+        delete_city1_entry.grid(row=0, column=1, padx=5, pady=2)
+        ttk.Label(delete_conn_frame, text="City 2:", font=("Arial", 10)).grid(row=1, column=0, padx=5, pady=2, sticky="w")
+        delete_city2_entry = ttk.Entry(delete_conn_frame, width=15, font=("Arial", 10))
+        delete_city2_entry.grid(row=1, column=1, padx=5, pady=2)
+        try:
+            delete_icon = Image.open(root_path / "assets" / "delete_icon.png")
+            delete_icon = delete_icon.resize((30, 30), Image.Resampling.LANCZOS)
+            self.delete_photo = ImageTk.PhotoImage(delete_icon)
+            delete_conn_btn = tk.Button(delete_conn_frame, image=self.delete_photo, command=lambda: self.delete_connection(delete_city1_entry, delete_city2_entry),
+                                      bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            delete_conn_btn.grid(row=2, column=0, columnspan=2, pady=5)
+        except FileNotFoundError:
+            delete_conn_btn = tk.Button(delete_conn_frame, text="Delete Connection", command=lambda: self.delete_connection(delete_city1_entry, delete_city2_entry),
+                                      font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
+            delete_conn_btn.grid(row=2, column=0, columnspan=2, pady=5)
+
+        ttk.Label(col2, text="Add Heritage", font=("Arial", 10)).pack(pady=5)
+        heritage_frame = tk.Frame(col2, bg="#f5f5f5")
         heritage_frame.pack(pady=5)
         ttk.Label(heritage_frame, text="Name:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
         heritage_name_entry = ttk.Entry(heritage_frame, width=15, font=("Arial", 10))
@@ -131,33 +200,13 @@ class AdminPanel(tk.Frame):
                                        font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
             heritage_add_btn.grid(row=2, column=0, columnspan=2, pady=5)
 
-        second_column = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
-        second_column.pack(side="left", fill="y", padx=5)
+        # Column 3: Visitor Analytics
+        col3 = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
+        col3.pack(side="left", fill="y", padx=5)
 
-        ttk.Label(second_column, text="Delete City", style="Red.TLabel").pack(pady=5)
-        del_frame = tk.Frame(second_column, bg="#f5f5f5")
-        del_frame.pack(pady=5)
-        ttk.Label(del_frame, text="City:", font=("Arial", 10)).grid(row=0, column=0, padx=5, pady=2, sticky="w")
-        del_entry = ttk.Entry(del_frame, width=15, font=("Arial", 10))
-        del_entry.grid(row=0, column=1, padx=5, pady=2)
-        try:
-            del_icon = Image.open(root_path / "assets" / "delete_icon.png")
-            del_icon = del_icon.resize((30, 30), Image.Resampling.LANCZOS)
-            self.del_photo = ImageTk.PhotoImage(del_icon)
-            del_btn = tk.Button(del_frame, image=self.del_photo, command=lambda: self.delete_city(del_entry),
-                              bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            del_btn.grid(row=1, column=0, columnspan=2, pady=5)
-        except FileNotFoundError:
-            del_btn = tk.Button(del_frame, text="Delete", command=lambda: self.delete_city(del_entry),
-                              font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            del_btn.grid(row=1, column=0, columnspan=2, pady=5)
-
-        third_column = tk.Frame(columns_frame, bg="#f5f5f5", width=300)
-        third_column.pack(side="left", fill="y", padx=5)
-
-        ttk.Label(third_column, text="Visitor Analytics", font=("Arial", 12)).pack(pady=5)
-        canvas = tk.Canvas(third_column, bg="#f5f5f5", height=400, width=300)
-        scrollbar = ttk.Scrollbar(third_column, orient="vertical", command=canvas.yview)
+        ttk.Label(col3, text="Visitor Analytics", font=("Arial", 12)).pack(pady=5)
+        canvas = tk.Canvas(col3, bg="#f5f5f5", height=400, width=300)
+        scrollbar = ttk.Scrollbar(col3, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg="#f5f5f5")
         scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
@@ -167,11 +216,12 @@ class AdminPanel(tk.Frame):
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        tk.Frame(columns_frame, bg="#ccc", width=2).pack(side="left", fill="y", padx=5)
-        tk.Frame(columns_frame, bg="#ccc", width=2).pack(side="left", fill="y", padx=5)
+        # Column 4: Vertical Buttons
+        col4 = tk.Frame(columns_frame, bg="#f5f5f5", width=100)
+        col4.pack(side="left", fill="y", padx=5)
 
-        buttons_frame = tk.Frame(main_frame, bg="#f5f5f5")
-        buttons_frame.pack(fill="x", pady=10)
+        buttons_frame = tk.Frame(col4, bg="#f5f5f5")
+        buttons_frame.pack(fill="y", pady=10)
 
         try:
             undo_icon = Image.open(root_path / "assets" / "undo_icon.png")
@@ -179,11 +229,11 @@ class AdminPanel(tk.Frame):
             self.undo_photo = ImageTk.PhotoImage(undo_icon)
             undo_btn = tk.Button(buttons_frame, image=self.undo_photo, command=self.undo,
                                bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            undo_btn.pack(side="left", padx=10)
+            undo_btn.pack(pady=5, fill="x")
         except FileNotFoundError:
             undo_btn = tk.Button(buttons_frame, text="Undo", command=self.undo,
                                font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            undo_btn.pack(side="left", padx=10)
+            undo_btn.pack(pady=5, fill="x")
 
         try:
             backup_icon = Image.open(root_path / "assets" / "backup_icon.png")
@@ -191,11 +241,11 @@ class AdminPanel(tk.Frame):
             self.backup_photo = ImageTk.PhotoImage(backup_icon)
             backup_btn = tk.Button(buttons_frame, image=self.backup_photo, command=self.backup,
                                  bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            backup_btn.pack(side="left", padx=10)
+            backup_btn.pack(pady=5, fill="x")
         except FileNotFoundError:
             backup_btn = tk.Button(buttons_frame, text="Backup", command=self.backup,
                                  font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            backup_btn.pack(side="left", padx=10)
+            backup_btn.pack(pady=5, fill="x")
 
         try:
             restore_icon = Image.open(root_path / "assets" / "restore_icon.png")
@@ -203,11 +253,11 @@ class AdminPanel(tk.Frame):
             self.restore_photo = ImageTk.PhotoImage(restore_icon)
             restore_btn = tk.Button(buttons_frame, image=self.restore_photo, command=self.restore,
                                   bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            restore_btn.pack(side="left", padx=10)
+            restore_btn.pack(pady=5, fill="x")
         except FileNotFoundError:
             restore_btn = tk.Button(buttons_frame, text="Restore", command=self.restore,
                                   font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            restore_btn.pack(side="left", padx=10)
+            restore_btn.pack(pady=5, fill="x")
 
         try:
             reset_icon = Image.open(root_path / "assets" / "reset_icon.png")
@@ -215,11 +265,11 @@ class AdminPanel(tk.Frame):
             self.reset_photo = ImageTk.PhotoImage(reset_icon)
             reset_btn = tk.Button(buttons_frame, image=self.reset_photo, command=self.reset_visitors_action,
                                 bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            reset_btn.pack(side="left", padx=10)
+            reset_btn.pack(pady=5, fill="x")
         except FileNotFoundError:
             reset_btn = tk.Button(buttons_frame, text="Reset Visitors", command=self.reset_visitors_action,
                                 font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            reset_btn.pack(side="left", padx=10)
+            reset_btn.pack(pady=5, fill="x")
 
         try:
             map_icon = Image.open(root_path / "assets" / "map_icon.png")
@@ -227,11 +277,16 @@ class AdminPanel(tk.Frame):
             self.map_photo = ImageTk.PhotoImage(map_icon)
             map_btn = tk.Button(buttons_frame, image=self.map_photo, command=self.show_whole_map,
                               bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            map_btn.pack(side="left", padx=10)
+            map_btn.pack(pady=5, fill="x")
         except FileNotFoundError:
             map_btn = tk.Button(buttons_frame, text="Whole Map", command=self.show_whole_map,
                               font=("Arial", 12), bg="#f5f5f5", bd=1, highlightbackground="#26A69A", activebackground="#e0e0e0")
-            map_btn.pack(side="left", padx=10)
+            map_btn.pack(pady=5, fill="x")
+
+        # Add separators between columns
+        tk.Frame(columns_frame, bg="#ccc", width=2).pack(side="left", fill="y", padx=5)
+        tk.Frame(columns_frame, bg="#ccc", width=2).pack(side="left", fill="y", padx=5)
+        tk.Frame(columns_frame, bg="#ccc", width=2).pack(side="left", fill="y", padx=5)
 
     def add_new_city(self, city_entry, to_entry, dist_entry):
         city = city_entry.get().strip()
@@ -239,8 +294,7 @@ class AdminPanel(tk.Frame):
         try:
             distance = int(dist_entry.get().strip())
             if city and to_city and distance > 0:
-                if (city, to_city) in [(u, v) for u in self.app.graph.edges for v, _ in self.app.graph.edges[u]] or \
-                   (to_city, city) in [(u, v) for u in self.app.graph.edges for v, _ in self.app.graph.edges[u]]:
+                if any((v == to_city) for v, _ in self.app.graph.get_neighbors(city)) or any((v == city) for v, _ in self.app.graph.get_neighbors(to_city)):
                     messagebox.showerror("Duplicate Edge", f"An edge already exists between {city} and {to_city}.")
                     return
                 self.app.admin.add_city("new", city, to_city, distance=distance)
@@ -248,7 +302,6 @@ class AdminPanel(tk.Frame):
                 self.app.city_list = sorted(self.app.graph.edges.keys())
                 self.go_frame.start_city["values"] = self.app.city_list
                 self.go_frame.end_city["values"] = self.app.city_list
-                # Save updated edges
                 edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
                 save_edges(edges_data)
                 messagebox.showinfo("Success", f"New city {city} connected to {to_city} with {distance} km.")
@@ -275,15 +328,12 @@ class AdminPanel(tk.Frame):
                 messagebox.showerror("Error", "Both from and to cities must exist.")
                 return
 
-            # Check if direct edge exists and delete it
-            if any(v == to_city for v, _ in self.app.graph.edges.get(from_city, [])):
+            if any(v == to_city for v, _ in self.app.graph.get_neighbors(from_city)):
                 self.app.graph.delete_edge(from_city, to_city)
 
-            # Add new edges with the specified distances
             self.app.graph.add_edge(from_city, city, dist_from)
             self.app.graph.add_edge(city, to_city, dist_to)
 
-            # Save updated edges
             edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
             save_edges(edges_data)
 
@@ -300,6 +350,55 @@ class AdminPanel(tk.Frame):
         except Exception as e:
             messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}")
 
+    def connect_cities(self, city1_entry, city2_entry, dist_entry):
+        city1 = city1_entry.get().strip()
+        city2 = city2_entry.get().strip()
+        try:
+            distance = int(dist_entry.get().strip())
+            if city1 and city2 and distance > 0:
+                if city1 not in self.app.graph.edges or city2 not in self.app.graph.edges:
+                    messagebox.showerror("Error", "Both cities must be registered.")
+                    return
+                if any((v == city2) for v, _ in self.app.graph.get_neighbors(city1)) or any((v == city1) for v, _ in self.app.graph.get_neighbors(city2)):
+                    messagebox.showerror("Duplicate Edge", f"An edge already exists between {city1} and {city2}.")
+                    return
+                # Directly add bidirectional edges to the graph
+                self.app.graph.add_edge(city1, city2, distance)
+                self.app.graph.add_edge(city2, city1, distance)
+                # Update city list and save edges
+                self.app.city_list = sorted(self.app.graph.edges.keys())
+                self.go_frame.start_city["values"] = self.app.city_list
+                self.go_frame.end_city["values"] = self.app.city_list
+                edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+                save_edges(edges_data)
+                # Verify the connection
+                if any(v == city2 for v, d in self.app.graph.get_neighbors(city1)) and any(v == city1 for v, d in self.app.graph.get_neighbors(city2)):
+                    messagebox.showinfo("Success", f"Connected {city1} to {city2} with {distance} km in both directions.")
+                else:
+                    messagebox.showerror("Error", f"Failed to connect {city1} and {city2}. Check graph implementation.")
+            else:
+                messagebox.showerror("Invalid Input", "Please fill all fields correctly.")
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Distance must be a positive integer.")
+
+    def delete_connection(self, city1_entry, city2_entry):
+        city1 = city1_entry.get().strip()
+        city2 = city2_entry.get().strip()
+        if city1 and city2:
+            if city1 in self.app.graph.edges and any(v == city2 for v, _ in self.app.graph.get_neighbors(city1)):
+                self.app.admin.delete_edge(city1, city2)
+                self.app.admin.delete_edge(city2, city1)  # Remove reverse direction
+                edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
+                save_edges(edges_data)
+                self.app.city_list = sorted(self.app.graph.edges.keys())
+                self.go_frame.start_city["values"] = self.app.city_list
+                self.go_frame.end_city["values"] = self.app.city_list
+                messagebox.showinfo("Success", f"Connection between {city1} and {city2} deleted.")
+            else:
+                messagebox.showwarning("Not Found", f"No connection exists between {city1} and {city2}.")
+        else:
+            messagebox.showerror("Invalid Input", "Please enter both city names.")
+
     def add_heritage(self, name_entry, city_entry):
         name = name_entry.get().strip()
         city = city_entry.get().strip()
@@ -314,18 +413,12 @@ class AdminPanel(tk.Frame):
         city = del_entry.get().strip()
         if city:
             if city in self.app.graph.edges:
-                # Remove all edges connected to the city
-                for u in list(self.app.graph.edges.keys()):
-                    if city in [v for v, _ in self.app.graph.edges.get(u, [])]:
-                        self.app.graph.delete_edge(u, city)
-                del self.app.graph.edges[city]
+                self.app.admin.delete_city(city)
                 if city in self.app.city_list:
                     self.app.city_list.remove(city)
                 self.go_frame.start_city["values"] = self.app.city_list
                 self.go_frame.end_city["values"] = self.app.city_list
-                # Save updated edges
-                edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
-                save_edges(edges_data)
+                self.app.visitors = load_visitors()  # Refresh visitors
                 messagebox.showinfo("Success", f"City '{city}' deleted.")
             else:
                 messagebox.showwarning("Not Found", f"City '{city}' does not exist.")
@@ -338,9 +431,9 @@ class AdminPanel(tk.Frame):
             self.app.city_list = sorted(self.app.graph.edges.keys())
             self.go_frame.start_city["values"] = self.app.city_list
             self.go_frame.end_city["values"] = self.app.city_list
-            # Save updated edges
             edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
             save_edges(edges_data)
+            self.app.visitors = load_visitors()  # Refresh visitors
             messagebox.showinfo("Success", "Last operation undone.")
         except ValueError as e:
             messagebox.showerror("Error", str(e))
@@ -359,7 +452,7 @@ class AdminPanel(tk.Frame):
         try:
             from utils.file_io import restore_database
             if restore_database():
-                self.app.graph = Graph()  # Assuming Graph is your custom class
+                self.app.graph = Graph()
                 self.app.edges = load_edges()
                 for from_city, to_city, distance in self.app.edges:
                     self.app.graph.add_edge(from_city, to_city, distance)
@@ -368,7 +461,6 @@ class AdminPanel(tk.Frame):
                 self.app.visitors = load_visitors()
                 self.go_frame.start_city["values"] = self.app.city_list
                 self.go_frame.end_city["values"] = self.app.city_list
-                # Save updated edges
                 edges_data = [(u, v, d) for u in self.app.graph.edges for v, d in self.app.graph.edges[u]]
                 save_edges(edges_data)
                 messagebox.showinfo("Success", "Database restored.")
@@ -388,11 +480,10 @@ class AdminPanel(tk.Frame):
         top.geometry("800x600")
         top.configure(bg="#f5f5f5")
 
-        # Create a networkx graph from the custom graph
         G = nx.Graph()
         for city in self.app.graph.edges.keys():
             G.add_node(city)
-            for neighbor, distance in self.app.graph.edges.get(city, []):
+            for neighbor, distance in self.app.graph.get_neighbors(city):
                 G.add_edge(city, neighbor, weight=distance)
 
         pos = nx.spring_layout(G)
